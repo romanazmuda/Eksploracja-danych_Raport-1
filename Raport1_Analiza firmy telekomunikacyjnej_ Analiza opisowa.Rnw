@@ -1,0 +1,572 @@
+\documentclass[12pt, a4paper]{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% dodatkowe pakiety LaTeX'a
+\usepackage[OT4]{polski}
+\usepackage[utf8]{inputenc}
+\usepackage[top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[colorlinks=true, linkcolor=blue]{hyperref}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ustawienia globalne
+<<ustawienia_globalne, echo=FALSE, warning=FALSE>>=
+library(knitr)
+library(xtable) 
+library(dplyr)
+library(moments)
+opts_chunk$set(fig.path='figure/', fig.align='center', fig.pos='H',fig.width=5, fig.height=4)
+
+@
+
+
+\begin{document}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% strona tytulowa
+\title{Raport 1 - Analiza firmy Telekomunikacyjnej}
+\author{Romana Żmuda & 249706 \\ Adrian Kit  & 249746}
+\maketitle
+\tableofcontents
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Krótki opis problemu, czyli co analizujemy i dlaczego?}
+
+\begin{itemize}
+\item Co analizujemy?
+Badamy zachowanie klientów sieci telekomunikacyjnej w celu przewidzenia przyszłych zachowań klientów na podstawie 3333 klientów oraz 21 cechach charakteryzujących. Między innymi mamy: 
+\begin{itemize}
+\item  Skąd pochodzi?
+\item  Jak długo korzysta/ł z planu?
+\item  Ile dany klient dzwonił w określonej porze dnia?
+\item  Czy przystąpił do planu poczty głosowej lub planu miedzynarodowego?
+\item  Ile razy dzwonił na infolini?
+\item  Czy zrezygnował z oferty firmy? 
+
+\end{itemize}
+\item Nasz problem badawczy? 
+Badanie wpływu oferty firmy na pozostanie klientów oraz wyciąganie wniosków z analizy danych klientów, którzy odeszli w celu utrzyamania większej ilości klientów. Tym samym interesuje Nas fakt, jakie zmiany musi wprowadzić firma, aby utrzymać jak najwięcej klientów oraz sprawdzić opłacalność Planów zaproponowanych dla klientów, które z nich realnie przyczyniają się do utrzymania klienta. Jak również bardziej spersonalizować usługi do potrzeb klientów.
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Opis eksperymentów}
+W naszym raporcie korzystaliśmy z histogramów, boxplotów i wielu innych graficznych reprezentacji danych uwzględniając poszczególne typy zmiennych. Więcej o samym użyciu, zakresach i rozkładach będziemy pisać w poszczególnych podsekcjach, aby zachować przejrzystość raportu.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Etap 1 - Przygotowanie danych }
+\subsection{A}
+
+% przygotowanie danych1
+<<przygotowanie danych1, echo=FALSE, eval=FALSE, warning=FALSE>>=
+getwd()
+setwd("C:\\Users\\roman\\Documents\\R\\Eksplo")
+getwd()
+  @
+Wczytujemy dane do przestrzeni R :
+  % przygotowanie danych2
+<<przygotowanie danych2, echo=TRUE, warning=FALSE>>=
+dane <- read.csv(file="churn.txt") 
+attach(dane) 
+  @
+Sprawdzamy, czy dane zostały dobrze rozpoznane:
+    % typy danych1
+<<typy danych1, echo=TRUE, warning=TRUE>>=
+Jakosciowe <- which(sapply(dane, is.factor)) #Cechy jakościowe
+Jakosciowe
+
+Ilosciowe <- which(sapply(dane, is.numeric))  #Cechy ilościowe
+Ilosciowe
+sapply(dane, class)
+
+  @
+
+Porównując otrzymane dane z oficjalnym  opisem zmiennych z pliku \textsl{churn.txt}:
+\begin{center}
+\begin{tabular}{l || l | l | l | l | l}
+ Nazwa & State & \textcolor{red}{Area code} & Int.l.Plan  & VMail.plan & Chunk    \\  \hline	
+ Typ & Jakościowe & \textcolor{red}{Jakościowe} & Jakościowe & Jakościowe & Jakościowe
+\end{tabular}
+\end{center}
+
+
+\begin{center}
+\begin{tabular}{l || l | l | l | l }
+ Nazwa & Account.Length & \textcolor{red}{Phone} & VMail.Message  & Day.Mins     \\  \hline	
+ Typ & Jakościowe & \textcolor{red}{0}   & Jakościowe & Jakościowe 
+\end{tabular}
+\end{center}
+
+
+\begin{itemize}
+\item Zauważamy, że R źle zinterpretował funkcje \textsl{Phone}, u nas pełni rolę identyfikatora, jednak jego liczbowy zapis program R utożsamia z typem ilościowym, ciągłym.
+\item Zmienna \textsl{Area.Code} różnież źle została rozpoznana, gdyby była cechą ilościową, to liczenie średniej od liczb porządkujących dostarczałoby informacji do niczego nieprzydatnych. Zmienna ta występuję, jako ciag liczbowy, więc znowu R funckyjnie przydzielił ją do cechy Ilościowej.
+\end{itemize}
+
+
+
+\subsection{B}
+\begin{itemize}
+\item Rozmiar danych:
+    % rozmiar danych
+<<rozmiar danych, echo=TRUE, warning=FALSE>>=
+ncol(dane) # ilość kolumn
+nrow(dane) #ilość przypadkóW
+  @  
+\item Typy poszczególnych cech:
+\begin{center}
+\begin{tabular}{l || l | l | l | l | }
+  Nazwa & Porządkowe & Nominalne & Ciągłe  & Dyskretne   \\  \hline	
+  State &  & X &  &  \\
+  Account.Length &  &  & X &  \\
+  Area.Code & X &  &  &  \\
+  Int.l.Plan & X &  &  &  \\
+  VMail.Plan	 & X &  &  &  \\
+  VMail.Message &  &  &  & X  \\
+  Day.Mins &  &  & X  &  \\
+  Day.Calls &  &  &  & X \\
+  Day.Charge &  & X &  &  \\
+  Eve.Mins &  &  & X &  \\
+  Eve.Calls &  &  &  & X \\
+  Eve.Charge &  &  & X &  \\	
+  Night.Mins &  &  & X &  \\ 
+  Night.Calls &  &  &  & X \\
+  Night.Charge &  &  & X  &  \\
+  Intl.Mins &  &  & X &  \\
+  Intl.Calls &  &  &  & X \\
+  Intl.Charge &  &  &  X &  \\
+  Intl.Calls &  &  &  & X \\
+  CustServ.Calls &  &  &  & X \\
+  Churn. & X &  &  &  \\ \hline	
+\end{tabular}
+\end{center}
+
+  
+\item Zmienna \textsl{Phone} jest zmienną niepotrzebną w dalszej analizie, gdyż pełni ona rolę identyfikatora  danego klienta.
+  % identyfikator
+<<identyfikator, echo=TRUE, warning=FALSE>>=
+dane <- select(dane, -Phone) #usunięcie niepotrzebnej zmiennej Phone
+  @  
+
+\item Nie stwierdziliśmy żadnych braków w danych:
+
+  % brakujace
+<<brakujace, echo=TRUE, warning=FALSE>>=
+ilebrakujacych<-sum(is.na(dane)) 
+
+ilebrakujacych #nie brakuje żadnej wartości
+  @  
+\item Nie zauważyliśmy żadnych nietypowych wartości
+  \end{itemize}
+  
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Etap 2 - Analiza opisowa }
+\subsection{A - Podstawowe wskażniki sumaryczne}
+\subsubsection{Cechy jakościowe}
+
+\begin{itemize}
+\item Zmienna: \textsl{Int.l.Plan} \newline
+
+Zmienna informuje o przystąpienie do planu międzynarodowego
+  % Int.l.Plan
+<<Int.l.Plan, echo=FALSE,eval=TRUE, warning=FALSE>>=
+
+liczebnosc_Int.l.Plan<-table(Int.l.Plan)
+liczebnosc_Int.l.Plan
+yes<-which(dane$Int.l.Plan=="yes")
+yes<-length(yes)
+
+no<-which(dane$Int.l.Plan=="no")
+no<-length(no)
+
+liczba<-c(yes,no)
+dlugosc<-length(Int.l.Plan)
+ileludzi<-round(100*liczba/dlugosc,1)
+labels<-c("YES","NO")
+labels<-paste(labels,ileludzi)
+labels<-paste(labels,"%", sep="")
+pie(table(dane$Int.l.Plan),labels=labels,main="Rozkład planu międzynarodowego")
+
+  @  
+90% nie korzysta z planu międzynarodowego. 
+
+\item Zmienna: \textsl{State} \newline
+
+  % State
+<<State, echo=TRUE, warning=FALSE>>=
+liczebnosci_State <- table(dane$State)
+k<-sort(table(dane$State))
+barplot(k, col=1:length(levels(State)))
+title("Wykres slupkowy (barplot) dla zmiennej State")
+
+
+mediana_State<-median(k)
+srednia_State<-mean(k)
+range_State<-range(k)
+mediana_State  #mediana ilości osób przypadających na dany Stan
+srednia_State # średnia ilości osób przypadających na dany Stan
+range_State #zakres wartości zmiennej State
+
+  @   
+Wnioski: Najwięcej osób jest ze stanu WV (Wirginia Zachodnia), a najmniej w CA (California), co obrazują dwie mocno skrajne wartości.  
+  
+  
+\end{itemize} 
+\subsubsection{Cechy ilościowe}
+\begin{itemize}
+\item Zmienna: \textsl{Account.Length}
+
+% summary
+<<summary, echo=FALSE, warning=FALSE>>=
+my.summary <- function(X)
+{
+  wynik <- c(min(X),quantile(X,0.25), median(X), mean(X), quantile(X,0.75), max(X), var(X), sd(X), IQR(X))
+  #minimum, kwantyl 25%, mediana, średnia, kwantyl 75%, maksimum, wariancja, 
+  #odchylenie standardowe, Rozstęp międzykwartylowy(Q3-Q1) 
+  names(wynik) <- c("min", "Q1", "median", "mean", "Q3", "max",
+                    "var", "sd", "IQR")
+  return(wynik)
+}
+
+@
+
+Zważywszy na duży rozrzut danych (zakres od 1 do 243) stosujemy 3 metody wyboru optymalnej szerokości przedziału w histogramie.
+% summaryA
+<<summaryA, echo=FALSE, warning=FALSE>>=
+par(mfrow=c(1,3))
+hist(Account.Length, breaks = "Sturges", main="metoda Sturgesa",
+     probability=FALSE, ylab="liczebnosci")
+hist(Account.Length, breaks = "Scott", main="metoda Scotta", 
+     probability=FALSE, ylab="liczebnosci")
+hist(Account.Length, breaks = "Freedman-Diaconis", main="metoda F-D.",
+     probability=FALSE, ylab="liczebnosci")
+par(mfrow=c(1,1))
+@
+
+\newline
+Poszczególne ilości klas dla róznych metod:
+
+% summaryA1
+<<summaryA1, echo=TRUE, warning=FALSE>>=
+nclass.Sturges(Account.Length) #Sturges
+nclass.scott(Account.Length) #Scott
+nclass.FD(Account.Length) #Freedman-Diaconis
+@  
+Naszym zdaniem, metoda Scotta jest najbardziej optymalna, ponieważ zachowuje przejrzystość przy dużej liczbie klas.
+\newpage
+
+Wykres częstości metodą Scotta oraz wskaźniki sumaryczne:
+% summaryA2
+<<summaryA2, echo=FALSE, warning=FALSE>>=
+
+
+hist(Account.Length, breaks = "Scott", main="metoda Scotta", probability=TRUE, ylab="częstości",
+     xlim=c(min(Account.Length),max(Account.Length)))
+
+boxplot(Account.Length, col="pink")
+title("Wykres pudełkowy (boxplot) - zmienna Account.Length")
+@
+
+
+% summaryA4
+<<summaryA4, echo=TRUE, warning=FALSE>>=
+
+Summary_Account.Length<-my.summary(Account.Length)
+Summary_Account.Length #wskażniki sumaryczne
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+getmode(dane$Account.Length) #dominanta
+
+skewness_Account.Length<-skewness(Account.Length)
+skewness_Account.Length #skośność
+
+splaszczenie_Account.Length<-kurtosis(Account.Length)
+splaszczenie_Account.Length # spłaszczenie
+@
+
+Wnioski: Histogram jest jednomodalny, prawostronnie skośny, wyostrzony (rozkład leptokurtyczny)
+\newpage
+
+\item Zmienna: \textsl{VMail.Message}
+\newline
+Zanim zajmiemy się analizą tej zmienny rozważmy ile osób realnie korzysta z oferty Poczty głosowej
+% zmiennaM1
+<<zmiennaM1, echo=FALSE, warning=FALSE>>=
+czestosci_VMail.Plan <- table(VMail.Plan) / length(VMail.Plan)
+czestosci_VMail.Plan<-czestosci_VMail.Plan*100
+czestosci_VMail.Plan
+@
+Widzimy, że z oferty poczty głosowej korzysta mniej niż jedna trzecia osób, ponieważ wartość zero występuje bardzo często( reprezentacja osób, które nie biorą udziału w ofercie) usuwamy ją, aby zobaczyć, jak realnie klienci wykorzystują możliwości planu poczty głosowej.
+\newline
+\newline
+Histogram zmiennej: Ilości wiadomości w poczcie głosowej
+% summaryM1
+<<summaryM1, echo=FALSE, warning=FALSE>>=
+Real_VMail.Message<-which(VMail.Message!=0)
+dane_Real_VMail.Message <- dane[ which(dane$VMail.Message>0), ]
+par(mfrow=c(1,2))
+hist(VMail.Message, breaks = "Scott", main="Maile w skrzynce", probability=TRUE, ylab="częstości")
+hist(Real_VMail.Message,probability=TRUE, ylab="częstości", main="Maile bez wartośći 0")
+boxplot(VMail.Message, col="pink")
+boxplot(Real_VMail.Message, col="pink")
+@
+
+
+
+% summaryM2
+<<summaryM2, echo=TRUE, warning=FALSE>>=
+Summary_VMail.Message<-my.summary(VMail.Message)
+Summary_VMail.Message 
+#wskaźniki sumaryczne dla zmiennej VMail.Message
+
+
+Summary_Real_VMail.Message<-my.summary(Real_VMail.Message)
+Summary_Real_VMail.Message 
+#wskaźniki sumaryczne dla zmiennej VMail.Message bez wartości "0"
+
+
+zakres <- range(dane$VMail.Message)
+zakres #zakres dla normalnej zmiennej ilości wiadomości w poczcie
+zakres <- range(dane_Real_VMail.Message$VMail.Message) 
+zakres # zakres zmiennej bez wartości 0
+
+skewness_VMail.Message<-skewness(VMail.Message)
+skewness_VMail.Message #skośność zmiennej VMail.Message
+skewness_Real_VMail.Message<-skewness(Real_VMail.Message)
+skewness_Real_VMail.Message #skośność zmiennej bez wartości 0
+
+splaszczenie_VMail.Message<-kurtosis(VMail.Message) 
+splaszczenie_VMail.Message #spłaszczanie zmiennej VMail.Message
+splaszczenie_Real_VMail.Message<-kurtosis(Real_VMail.Message) 
+splaszczenie_Real_VMail.Message #spłaszczanie zmiennej bez wartości 0
+@
+Wnioski: Widzimy, że wartość "0" mocno zaburza możliwości obserwacji. Klienci w znacznym stopniu korzystają z funckcji poczty głosowej.
+\newpage
+\item Zmienne: \textsl{minut, liczby połączeń, opłat za okres: do południa, po południu, w nocy oraz połączeń międzynarodowych}
+\newline
+Analiza minut, połączeń oraz opłat za poranek
+% calls1
+<<calls1, echo=FALSE, warning=FALSE>>=
+#Analiza minut, połączeń oraz opłat za poranek
+par(mfrow=c(2,3))
+hist(Day.Mins,probability = TRUE,main="Day.Mins")
+hist(Day.Charge,probability = TRUE,main="Day.Charge")
+hist(Day.Calls,probability = TRUE,main="Day.Calls")
+boxplot(Day.Mins, main="Day.Mins")
+boxplot(Day.Charge, main="Day.Charge")
+boxplot(Day.Calls, main="Day.Calls")
+@
+
+Analiza minut, połączeń oraz opłat za popołudnie
+% calls2
+<<calls2, echo=FALSE, warning=FALSE>>=
+par(mfrow=c(2,3))
+hist(Eve.Mins,probability = TRUE,main="Eve.Mins")
+hist(Eve.Charge,probability = TRUE,main="Eve.Charge")
+hist(Eve.Calls,probability = TRUE,main="Eve.Calls")
+boxplot(Eve.Mins, main="Eve.Mins")
+boxplot(Eve.Charge, main="Eve.Charge")
+boxplot(Eve.Calls, main="Eve.Calls")
+@
+\newpage
+Analiza minut, połączeń oraz opłat za wieczór
+% calls3
+<<calls3, echo=FALSE, warning=FALSE>>=
+par(mfrow=c(2,3))
+hist(Night.Mins,probability = TRUE,main="Night.Mins")
+hist(Night.Charge,probability = TRUE,main="Night.Charge")
+hist(Night.Calls,probability = TRUE,main="Night.Calls")
+boxplot(Night.Mins, main="Night.Mins")
+boxplot(Night.Charge, main="Night.Charge")
+boxplot(Night.Calls, main="Night.Calls")
+@
+
+Analiza minut, połączeń oraz opłat za połaczenia międzynarodowe
+% calls4
+<<calls4, echo=FALSE, warning=FALSE>>=
+par(mfrow=c(2,3))
+hist(Intl.Mins,probability = TRUE,main="Intl.Charge")
+hist(Intl.Charge,probability = TRUE,main="Intl.Charge")
+hist(Intl.Calls,probability = TRUE,main="Intl.Calls")
+boxplot(Intl.Mins, main="Intl.Charge")
+boxplot(Intl.Charge, main="Intl.Charge")
+boxplot(Intl.Calls, main="Intl.Calls") 
+#krótkie rozmowy oraz mało połączeń w ciągu dnia, widzimy iż klienci starają się płacić jak najmniej
+
+@
+
+
+Porównanie różnych pór w ciągu dobry z ilości wykonywanych połączeń wraz z długością połączeń
+% calls411
+<<calls411, echo=FALSE, warning=FALSE>>=
+par(mfrow=c(2,3))
+hist(Day.Charge,probability = TRUE)
+hist(Eve.Charge,probability = TRUE)
+hist(Night.Charge,probability = TRUE)
+
+hist(Day.Mins,probability = TRUE)
+hist(Eve.Mins,probability = TRUE)
+hist(Night.Mins,probability = TRUE)
+@
+Zauważamy, że każdy z tych histogramów ma podobny kszatł oraz na podobnym poziomie prawdopodobienstwo występowania.
+% calls413
+<<calls413, echo=TRUE, warning=FALSE>>=
+skewness_Day.Charge<-skewness(Day.Charge) 
+skewness_Eve.Charge<-skewness(Eve.Charge)
+skewness_Night.Charge<-skewness(Night.Charge)
+c_skewness_calls <-c(skewness_Day.Charge,skewness_Eve.Charge,skewness_Night.Charge)
+c_skewness_calls #skośność opłat dla róznych pór dnia
+@
+Wszytskie połączenie mają rozkład bardzo zbliżony do rozkładu normalnego
+\newline
+Wskaźniki sumaryczne dla długości rozmów w różnych porach dnia:
+% calls412
+<<calls412, echo=TRUE, warning=FALSE>>= 
+Summary_Day.Mins<-my.summary(Day.Mins)
+Summary_Eve.Mins<-my.summary(Eve.Mins)
+Summary_Night.Mins<-my.summary(Night.Mins)
+c_summary_calls_mins<-cbind(Summary_Day.Mins,Summary_Eve.Mins,Summary_Night.Mins)
+c_summary_calls_mins 
+@
+\subsection{B}
+Szukanie korelacji między zmiennymi 
+W tym podpunkcie przeanalizujemy dane pod kątem potencjalnych korelacji cech. W tym celu skorzystamy z wykresów rozrzutu. 
+\newline 
+Wykres rozrzutu między połączeniami w ciągu dnia, a minutami
+% ksk1
+<<ksk1, echo = FALSE, warning=FALSE>>=
+pairs(cbind(Day.Calls,Day.Charge, Day.Mins), col=Churn., pch=16, cex=0.5)
+@
+Korelacja wielu zmiennych
+% ks
+<<ks, echo = FALSE, warning=FALSE>>=
+pairs(cbind(Day.Calls,Day.Charge, Day.Mins, Eve.Calls,Eve.Charge,Eve.Mins,Night.Calls,Night.Charge,Night.Mins,Intl.Calls,Intl.Mins,Intl.Charge))
+@
+
+Widać, że jedyne korelacje występują między długością trwania połączeń a opłatami, niezależnie od pory dnia.
+
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{ETAP 3}
+
+W tym etapie spróbujemy znaleźć przyczyny rezygnacji klientów z usług firmy poprzez analizę poszczególnych cech z podziałem klientów na lojalnych i tych, którzy zakończyli współpracę. 
+
+\subsubsection{Jakościowe}
+\begin{itemize}
+\item Zmienna: \textsl{Int.l.Plan} Plan międzynarodowy
+
+%summary A11
+<<summaryA11, echo = TRUE, warning=FALSE>>=
+dane.lojalni <- subset(dane, Churn.=="False.") #zostali
+dane.odeszli <- subset(dane, Churn.=="True.") #odeszli
+plot(Int.l.Plan~Churn., main="Rezygnacje klientów a plan międzynarodowy")
+@
+Można zauważyć tu znaczne zróżnicowanie. Klienci, którzy używali tego pakietu częściej rezygnowali z usług firmy.
+\newline
+
+OPCJONALNIE: Spośród klientów, którzy odeszli, 30\% z nich miało plan międzynarodowy, natomiast 95\% klientów lojalnych nie posiada tego pakietu.
+\newpage
+
+\item Zmienna: \textsl{VoiceMail} Plan poczty głosowej
+%summaryA12
+<<summaryA12, echo = TRUE, warning=FALSE>>=
+plot(VMail.Plan~Churn., main="Rezygnacje klientów a poczta głosowa")
+@
+Plan poczty głosowej nie miał większego wpływu na rezygnowanie z usług firmy.
+
+
+\item Zmienna:  \textsl{Cust.ser.calls}
+%summaryA13
+<<summaryA13, echo = FALSE, warning=FALSE>>=
+plot(Churn.~as.factor(CustServ.Calls), col=c("green","red"),main="Ilość połączeń z biurem klienta")
+@
+
+Widać, że klienci, którzy zdecydowali się odejść częściej dzwonili na infolinię. DLa 4 i więcej połączeń mamy jest to ponad 50\%. Może to sugerować niezadowolenie z jakości świadczonej usługi.
+
+\end{itemize}
+
+
+
+\subsubsection{Ilościowe}
+\begin{itemize}
+\item Zmienna: \textsl{Account length}
+%summaryA14
+<<summaryA14, echo = FALSE, warning=FALSE>>=
+par(mfrow=c(2,1))
+zakres <- range(Account.Length)
+hist(Account.Length[Churn.=="False."], xlim=zakres,  prob=T,col="green", main = "Czas współpracy a lojalni klienci")
+hist(Account.Length[Churn.=="True."], xlim=zakres, prob=T, col="red", main = "Czas współpracy a nielojalni klienci")
+
+by(data=Account.Length, INDICES=Churn., my.summary)
+@
+Wykresy są niemal identyczne, co powinno oznaczać, że długość współpracy z firmą nie miała wpływu na dalsze korzystanie z jej usług. Może to świadczyć o niewystarczającym nagradzaniu lojalności klientów. 
+
+\item Zmienna: \textsl{Vmail Message}
+%summaryA151
+<<summaryA151, echo = FALSE, warning=FALSE>>=
+zakres1 <- range(VMail.Message)
+hist(VMail.Message[Churn.=="False."], xlim=zakres1,  prob=T,col="green", main = "Ilość wiadomości głosowych a lojalni klienci")
+hist(VMail.Message[Churn.=="True."], xlim=zakres1, prob=T, col="red", main = "Ilość wiadomości głosowych a nielojalni klienci")
+
+
+by(data=VMail.Message, INDICES=Churn., my.summary)
+@
+
+Poczta głosowa jest rzadko wybierana w obu grupach, więc nie powinna być przyczyną rezygnacji klienta z usług firmy. 
+
+\item Zmienna: \textsl{Analiza rozmów w róznych porach dobowych}
+%summaryA16
+<<summaryA16, echo = FALSE, warning=FALSE>>=
+par(mfrow=c(2,3))
+zakresD <- range(Day.Mins)
+hist(Day.Calls[Churn.=="False."], xlim=zakres,  prob=T,col="green")
+hist(Eve.Calls[Churn.=="False."], xlim=zakres,  prob=T,col="green")
+hist(Night.Calls[Churn.=="False."], xlim=zakres,  prob=T,col="green")
+hist(Day.Calls[Churn.=="True."], xlim=zakres, prob=T, col="red")
+hist(Eve.Calls[Churn.=="True."], xlim=zakres, prob=T, col="red")
+hist(Night.Calls[Churn.=="True."], xlim=zakres, prob=T, col="red")
+@
+
+%summaryA17
+<<summaryA17, echo =FALSE, warning=FALSE>>=
+par(mfrow=c(2,3))
+zakresM <- range(Day.Mins)
+zakresC<- range(Day.Calls)
+zakresCh <- range(Day.Charge)
+hist(Day.Mins[Churn.=="False."], xlim=zakresM,  prob=T,col="green")
+hist(Day.Calls[Churn.=="False."], xlim=zakresC,  prob=T,col="green")
+hist(Day.Charge[Churn.=="False."], xlim=zakresCh,  prob=T,col="green")
+hist(Day.Mins[Churn.=="True."], xlim=zakresM, prob=T, col="red")
+hist(Day.Calls[Churn.=="True."], xlim=zakresC, prob=T, col="red")
+hist(Day.Charge[Churn.=="True."], xlim=zakresCh, prob=T, col="red")
+@
+
+Tylko dzień, widać że lojalni klienci dużo więcej rozmawiają, w pełni korzystają z oferty, dlatego chcą ją kontynuować. Opłacalnośc idzie w parze z pełnym wykorzystaniem.
+
+\item Zmienna: \textsl{State}
+%summaryA171
+<<summaryA171, echo =FALSE, warning=FALSE>>=
+plot(Churn.~as.factor(State), col=c("green","red"), xlab = "State")
+@
+Procent osób które odeszły różni się w zależności od stanu.
+
+
+
+\end{itemize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{ETAP 4}
+Co wiemy o klientach sieci? 
+\begin{itemize}
+\item Klienci korzystali głównie z połączeń
+\item Pora dnia nie ma wpływu na długość i ilość połączeń
+\item Mała popularność usługi poczty głosowej i planu międzynarodowego
+\item Spopularyzowanie usług poczty głosowej i planu międzynarodowego
+\item Klienci rezygnowali z usług firmy bez względu na długość trwania współpracy, być może lojalność powinna być lepiej nagradzana.
+\item Zbyt wielu klientów korzystających z planu międzynarodowego zrezygnowało z usług firmy. Powinny zostać wprowadzone niezbędne korekty bazujące na ofertach konkurencji. 
+\item Niezadowolenie z usług obsługi klienta. Ponad 50\% klientów, która wykonała 4 i więcej połączeń zdecydowała się zakończyć współpracę
+\item Klienci, którzy zrezygnowali z usług naszej firmy prowadzili dłuższe rozmowy od lojalnych klientów. Na tej podstawie można przypuszczać, że konkurencja oferuje lepsze ceny za dłuższe połączenia, warto więc poprawić cenę w naszej firmie
+\end{itemize}
+\end{document}
